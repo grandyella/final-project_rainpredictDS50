@@ -11,7 +11,7 @@ st.title("☔ Prediksi Hujan Besok (Auto-encode sesuai scaler)")
 # ----------------------------
 # CONFIG: ganti ID_MODEL dengan ID Google Drive model kamu
 # ----------------------------
-ID_MODEL = "ISI_ID_MODEL_DRIVE_DI_SINI"   # <- GANTI INI
+ID_MODEL = "1vw9qq0NPiVOdZpRfq26nTvggEv9mQWBs"   # <- GANTI INI
 MODEL_PATH = "random_forest_model.joblib"
 SCALER_PATH = "scaler.joblib"  # harus ada di repo (kecil)
 
