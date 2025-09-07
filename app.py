@@ -11,7 +11,7 @@ st.title("☔ Prediksi Hujan Besok")
 # ----------------------------
 # CONFIG
 # ----------------------------
-ID_MODEL = "1vw9qq0NPiVOdZpRfq26nTvggEv9mQWBs"   # ID model dari Google Drive
+ID_MODEL = "1vw9qq0NPiVOdZpRfq26nTvggEv9mQWBs"   # ID model di Google Drive
 MODEL_PATH = "random_forest_model.joblib"
 SCALER_PATH = "scaler.joblib"  # harus ada di repo (kecil)
 
@@ -24,18 +24,18 @@ model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 feature_names = list(scaler.feature_names_in_)
 
-# Buat template DataFrame kosong sesuai scaler
+# Template DataFrame kosong sesuai scaler
 X_template = pd.DataFrame([[0]*len(feature_names)], columns=feature_names, dtype=float)
 
 # ----------------------------
-# FRONTEND SIMPLE (tanpa default angka)
+# FRONTEND
 # ----------------------------
 st.write("### Masukkan Data Cuaca")
 
 today = date.today()
-year = st.number_input("Year", step=1, format="%d")
-month = st.number_input("Month", min_value=1, max_value=12, step=1, format="%d")
-day = st.number_input("Day", min_value=1, max_value=31, step=1, format="%d")
+year = st.selectbox("Year", list(range(2000, today.year+1)), index=(today.year-2000))
+month = st.selectbox("Month", list(range(1, 13)), index=today.month-1)
+day = st.selectbox("Day", list(range(1, 32)), index=today.day-1)
 
 location = st.text_input("Location (contoh: Sydney)")
 
@@ -50,7 +50,7 @@ wind_speed3pm = st.number_input("Wind Speed 3pm (km/h)", format="%.2f")
 rain_today = st.selectbox("RainToday", ["No", "Yes"])
 
 # ----------------------------
-# BUILD INPUT SESUAI TEMPLATE
+# BUILD INPUT
 # ----------------------------
 X = X_template.copy()
 
@@ -68,7 +68,7 @@ try:
     X.loc[0, "WindSpeed3pm"] = wind_speed3pm
     X.loc[0, "RainToday"] = 1 if rain_today == "Yes" else 0
 
-    # one-hot untuk Location
+    # one-hot Location
     if location:
         col_location = f"Location_{location}"
         if col_location in X.columns:
@@ -80,13 +80,40 @@ except Exception:
     st.info("Isi semua input terlebih dahulu untuk bisa prediksi.")
 
 # ----------------------------
-# PREDIKSI
+# PREDIKSI + PENJELASAN
 # ----------------------------
 if st.button("Prediksi"):
     try:
         X_scaled = scaler.transform(X)
-        pred = model.predict(X_scaled)
-        hasil = "🌧️ Hujan" if int(pred[0]) == 1 else "☀️ Tidak Hujan"
-        st.success(f"Hasil Prediksi: **{hasil}**")
+        pred = model.predict(X_scaled)[0]
+
+        if int(pred) == 1:
+            hasil = "🌧️ Besok kemungkinan **Hujan**"
+            alasan = []
+            if rainfall > 0:
+                alasan.append("Sudah ada curah hujan hari ini.")
+            if humidity3pm > 70 or humidity9am > 80:
+                alasan.append("Kelembapan udara cukup tinggi.")
+            if wind_speed3pm > 20:
+                alasan.append("Kecepatan angin sore cukup kencang, berpotensi membawa hujan.")
+            if not alasan:
+                alasan.append("Model mendeteksi pola cuaca yang mendukung hujan.")
+        else:
+            hasil = "☀️ Besok kemungkinan **Tidak Hujan**"
+            alasan = []
+            if rainfall == 0:
+                alasan.append("Hari ini tidak ada curah hujan.")
+            if humidity3pm < 60 and humidity9am < 70:
+                alasan.append("Kelembapan udara relatif rendah.")
+            if max_temp > 25:
+                alasan.append("Suhu cukup tinggi, cenderung cerah.")
+            if not alasan:
+                alasan.append("Model mendeteksi kondisi cuaca stabil tanpa potensi hujan.")
+
+        st.success(hasil)
+        st.write("**Penjelasan:**")
+        for a in alasan:
+            st.write(f"- {a}")
+
     except Exception as e:
         st.error(f"Gagal prediksi: {e}")
