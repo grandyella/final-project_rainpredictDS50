@@ -16,43 +16,52 @@ model = joblib.load(model_path)
 scaler = joblib.load(scaler_path)
 features = list(scaler.feature_names_in_)
 
-# buat template
+# template kosong
 X = pd.DataFrame([[0]*len(features)], columns=features)
 
 st.title("Prediksi Hujan Besok")
 
-# input sederhana
-year = st.selectbox("Tahun", list(range(2000, 2025)))
-month = st.selectbox("Bulan", list(range(1, 13)))
-day = st.selectbox("Hari", list(range(1, 32)))
-
-# lokasi dropdown
+# input lokasi, season, region
 locs = sorted({f.split("_",1)[1] for f in features if f.startswith("Location_")})
 location = st.selectbox("Lokasi", locs)
 
-minT = st.number_input("Min Temp", -5.0, 45.0, step=0.1)
-maxT = st.number_input("Max Temp", -5.0, 50.0, step=0.1)
-rainfall = st.number_input("Rainfall (mm)", 0.0, 370.0, step=0.1)
+season = st.selectbox("Season", [1,2,3,4], format_func=lambda x: ["Summer","Fall","Winter","Spring"][x-1])
 
-humidity9 = st.number_input("Humidity 9am (%)", 0.0, 100.0, step=0.1)
-humidity3 = st.number_input("Humidity 3pm (%)", 0.0, 100.0, step=0.1)
+regions = sorted({f.split("_",1)[1] for f in features if f.startswith("Region_")})
+region = st.selectbox("Region", regions)
 
-rainToday = st.selectbox("Rain Today", ["No", "Yes"])
+# input suhu dan tekanan
+temp9am = st.number_input("Temp 9am (°C)", -5.0, 45.0, step=0.1)
+temp3pm = st.number_input("Temp 3pm (°C)", -5.0, 45.0, step=0.1)
 
-# isi dataframe
-X.loc[0,"Year"] = year
-X.loc[0,"Month"] = month
-X.loc[0,"Day"] = day
-X.loc[0,"MinTemp"] = minT
-X.loc[0,"MaxTemp"] = maxT
-X.loc[0,"Rainfall"] = rainfall
-X.loc[0,"Humidity9am"] = humidity9
-X.loc[0,"Humidity3pm"] = humidity3
-X.loc[0,"RainToday"] = 1 if rainToday=="Yes" else 0
+pressure9am = st.number_input("Pressure 9am (hPa)", 980.0, 1045.0, step=0.1)
+pressure3pm = st.number_input("Pressure 3pm (hPa)", 980.0, 1045.0, step=0.1)
 
-col_loc = f"Location_{location}"
-if col_loc in X.columns:
-    X.loc[0,col_loc] = 1.0
+# input angin
+windDirs = sorted({f.split("_")[1] for f in features if f.startswith("WindDir9am_")})
+
+wind_gust_speed = st.number_input("Wind Gust Speed (km/h)", 0.0, 135.0, step=0.1)
+wind_gust_dir = st.selectbox("Wind Gust Dir", windDirs)
+
+wind_dir9am = st.selectbox("Wind Dir 9am", windDirs)
+wind_dir3pm = st.selectbox("Wind Dir 3pm", windDirs)
+
+# isi data ke dataframe
+X.loc[0,"Season"] = season
+X.loc[0,"Temp9am"] = temp9am
+X.loc[0,"Temp3pm"] = temp3pm
+X.loc[0,"Pressure9am"] = pressure9am
+X.loc[0,"Pressure3pm"] = pressure3pm
+X.loc[0,"WindGustSpeed"] = wind_gust_speed
+
+# one hot encode kategori
+for pref,val in [("Location",location),("Region",region),
+                 ("WindGustDir",wind_gust_dir),
+                 ("WindDir9am",wind_dir9am),
+                 ("WindDir3pm",wind_dir3pm)]:
+    col = f"{pref}_{val}"
+    if col in X.columns:
+        X.loc[0,col] = 1.0
 
 # prediksi
 if st.button("Prediksi"):
@@ -62,9 +71,9 @@ if st.button("Prediksi"):
         prob = model.predict_proba(Xs)[0][1]
 
         if pred == 1:
-            st.write("Besok kemungkinan Hujan")
+            st.write("Besok kemungkinan Hujan ☔")
         else:
-            st.write("Besok kemungkinan Tidak Hujan")
+            st.write("Besok kemungkinan Tidak Hujan ☀️")
 
         st.write("Probabilitas hujan:", round(prob*100,2), "%")
 
