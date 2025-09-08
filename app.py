@@ -13,9 +13,9 @@ st.title("☔ Prediksi Hujan Besok")
 # ----------------------------
 ID_MODEL = "1vw9qq0NPiVOdZpRfq26nTvggEv9mQWBs"   # ID model di Google Drive
 MODEL_PATH = "random_forest_model.joblib"
-SCALER_PATH = "scaler.joblib"  # harus ada di repo (kecil)
+SCALER_PATH = "scaler.joblib"  # harus ada di repo
 
-# Download model dari Drive jika belum ada
+# Download model jika belum ada
 if not os.path.exists(MODEL_PATH):
     gdown.download(f"https://drive.google.com/uc?id={ID_MODEL}", MODEL_PATH, quiet=False)
 
@@ -24,15 +24,14 @@ model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 feature_names = list(scaler.feature_names_in_)
 
-# Template DataFrame kosong sesuai scaler
+# Template DataFrame kosong
 X_template = pd.DataFrame([[0]*len(feature_names)], columns=feature_names, dtype=float)
 
 today = date.today()
 
 # ----------------------------
-# FRONTEND INPUT
+# INPUT
 # ----------------------------
-
 with st.expander("📍 Informasi Lokasi & Tanggal", expanded=True):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -42,9 +41,8 @@ with st.expander("📍 Informasi Lokasi & Tanggal", expanded=True):
     with col3:
         day = st.selectbox("Day", list(range(1, 32)), index=today.day-1)
 
-    # Location dropdown
     locations = sorted({f.split("_", 1)[1] for f in feature_names if f.startswith("Location_")})
-    location = st.selectbox("🏙️ Location", locations, help="Pilih lokasi stasiun cuaca")
+    location = st.selectbox("🏙️ Location", locations, help="Lokasi stasiun cuaca")
 
     season = st.selectbox("🍂 Season", [1, 2, 3, 4],
                           format_func=lambda x: ["Summer","Fall","Winter","Spring"][x-1])
@@ -55,50 +53,57 @@ with st.expander("📍 Informasi Lokasi & Tanggal", expanded=True):
 with st.expander("🌡️ Suhu & Curah Hujan", expanded=False):
     col1, col2 = st.columns(2)
     with col1:
-        min_temp = st.number_input("MinTemp (°C)", format="%.2f",
-                                   help="Suhu minimum harian dalam °C")
-        max_temp = st.number_input("MaxTemp (°C)", format="%.2f",
-                                   help="Suhu maksimum harian dalam °C")
-        rainfall = st.number_input("🌧️ Rainfall (mm)", format="%.2f",
-                                   help="Jumlah curah hujan hari ini (mm)")
+        min_temp = st.number_input("MinTemp (°C)", -5.0, 45.0, step=0.1,
+                                   help="Suhu minimum harian, biasanya antara -5°C dan 45°C")
+        max_temp = st.number_input("MaxTemp (°C)", -5.0, 50.0, step=0.1,
+                                   help="Suhu maksimum harian, biasanya antara -5°C dan 50°C")
+        rainfall = st.number_input("🌧️ Rainfall (mm)", 0.0, 370.0, step=0.1,
+                                   help="Curah hujan harian, biasanya 0–50 mm")
     with col2:
-        temp9am = st.number_input("Temp 9am (°C)", format="%.2f")
-        temp3pm = st.number_input("Temp 3pm (°C)", format="%.2f")
+        temp9am = st.number_input("Temp 9am (°C)", -5.0, 45.0, step=0.1,
+                                  help="Suhu pada pukul 9 pagi")
+        temp3pm = st.number_input("Temp 3pm (°C)", -5.0, 45.0, step=0.1,
+                                  help="Suhu pada pukul 3 sore")
 
 with st.expander("💧 Kelembapan & Tekanan Udara", expanded=False):
     col1, col2 = st.columns(2)
     with col1:
-        humidity9am = st.number_input("Humidity 9am (%)", format="%.2f",
-                                      help="Kelembapan udara pagi hari (%)")
-        humidity3pm = st.number_input("Humidity 3pm (%)", format="%.2f",
-                                      help="Kelembapan udara sore hari (%)")
+        humidity9am = st.number_input("Humidity 9am (%)", 0.0, 100.0, step=0.1,
+                                      help="Kelembapan udara pagi hari (0–100%)")
+        humidity3pm = st.number_input("Humidity 3pm (%)", 0.0, 100.0, step=0.1,
+                                      help="Kelembapan udara sore hari (0–100%)")
     with col2:
-        pressure9am = st.number_input("Pressure 9am (hPa)", format="%.2f",
-                                      help="Tekanan udara pagi hari (hPa)")
-        pressure3pm = st.number_input("Pressure 3pm (hPa)", format="%.2f",
-                                      help="Tekanan udara sore hari (hPa)")
+        pressure9am = st.number_input("Pressure 9am (hPa)", 980.0, 1045.0, step=0.1,
+                                      help="Tekanan atmosfer pagi hari (980–1045 hPa)")
+        pressure3pm = st.number_input("Pressure 3pm (hPa)", 980.0, 1045.0, step=0.1,
+                                      help="Tekanan atmosfer sore hari (980–1045 hPa)")
 
 with st.expander("💨 Angin", expanded=False):
     wind_directions = sorted({f.split("_")[1] for f in feature_names if f.startswith("WindDir9am_")})
 
     col1, col2 = st.columns(2)
     with col1:
-        wind_gust_speed = st.number_input("Wind Gust Speed (km/h)", format="%.2f",
-                                          help="Kecepatan angin paling kencang")
-        wind_speed9am = st.number_input("Wind Speed 9am (km/h)", format="%.2f")
-        wind_gust_dir = st.selectbox("Wind Gust Dir", wind_directions)
+        wind_gust_speed = st.number_input("Wind Gust Speed (km/h)", 0.0, 135.0, step=0.1,
+                                          help="Kecepatan angin paling kencang dalam sehari (0–135 km/h)")
+        wind_speed9am = st.number_input("Wind Speed 9am (km/h)", 0.0, 80.0, step=0.1,
+                                        help="Kecepatan angin rata-rata pada pukul 9 pagi (0–80 km/h)")
+        wind_gust_dir = st.selectbox("Wind Gust Dir", wind_directions,
+                                     help="Arah angin saat hembusan terkuat")
     with col2:
-        wind_speed3pm = st.number_input("Wind Speed 3pm (km/h)", format="%.2f")
-        wind_dir9am = st.selectbox("Wind Dir 9am", wind_directions)
-        wind_dir3pm = st.selectbox("Wind Dir 3pm", wind_directions)
+        wind_speed3pm = st.number_input("Wind Speed 3pm (km/h)", 0.0, 80.0, step=0.1,
+                                        help="Kecepatan angin rata-rata pada pukul 3 sore (0–80 km/h)")
+        wind_dir9am = st.selectbox("Wind Dir 9am", wind_directions,
+                                   help="Arah angin dominan pukul 9 pagi")
+        wind_dir3pm = st.selectbox("Wind Dir 3pm", wind_directions,
+                                   help="Arah angin dominan pukul 3 sore")
 
-rain_today = st.selectbox("☔ RainToday", ["No", "Yes"])
+rain_today = st.selectbox("☔ RainToday", ["No", "Yes"],
+                          help="Apakah hari ini hujan? Dipakai model untuk prediksi besok")
 
 # ----------------------------
 # BUILD INPUT
 # ----------------------------
 X = X_template.copy()
-
 X.loc[0, "Year"] = year
 X.loc[0, "Month"] = month
 X.loc[0, "Day"] = day
@@ -127,13 +132,7 @@ for prefix, val in [("Location", location), ("Region", region),
         X.loc[0, col] = 1.0
 
 # ----------------------------
-# PREVIEW DATA
-# ----------------------------
-st.subheader("🔎 Preview Data Input")
-st.dataframe(X.T.rename(columns={0: "Value"}))
-
-# ----------------------------
-# PREDIKSI + HASIL
+# PREDIKSI
 # ----------------------------
 if st.button("🚀 Prediksi"):
     try:
