@@ -37,13 +37,18 @@ year = st.selectbox("Year", list(range(2000, today.year+1)), index=(today.year-2
 month = st.selectbox("Month", list(range(1, 13)), index=today.month-1)
 day = st.selectbox("Day", list(range(1, 32)), index=today.day-1)
 
-location = st.text_input("Location (contoh: Sydney)")
+# Location dropdown dari scaler
+locations = sorted({f.split("_", 1)[1] for f in feature_names if f.startswith("Location_")})
+location = st.selectbox("Location", locations)
 
 # Season (1=Summer, 2=Fall, 3=Winter, 4=Spring)
 season = st.selectbox("Season", [1, 2, 3, 4], format_func=lambda x: ["Summer","Fall","Winter","Spring"][x-1])
 
-region = st.selectbox("Region", ["North", "South", "West"])
+# Region dropdown dari scaler
+regions = sorted({f.split("_", 1)[1] for f in feature_names if f.startswith("Region_")})
+region = st.selectbox("Region", regions)
 
+# Input angka
 min_temp = st.number_input("MinTemp (°C)", format="%.2f")
 max_temp = st.number_input("MaxTemp (°C)", format="%.2f")
 rainfall = st.number_input("Rainfall (mm)", format="%.2f")
@@ -60,7 +65,7 @@ wind_gust_speed = st.number_input("Wind Gust Speed (km/h)", format="%.2f")
 wind_speed9am = st.number_input("Wind Speed 9am (km/h)", format="%.2f")
 wind_speed3pm = st.number_input("Wind Speed 3pm (km/h)", format="%.2f")
 
-# Dropdown arah angin (ambil dari scaler)
+# Dropdown arah angin dari scaler
 wind_directions = sorted({f.split("_")[1] for f in feature_names if f.startswith("WindDir9am_")})
 wind_gust_dir = st.selectbox("Wind Gust Dir", wind_directions)
 wind_dir9am = st.selectbox("Wind Dir 9am", wind_directions)
@@ -93,13 +98,10 @@ try:
     X.loc[0, "WindSpeed3pm"] = wind_speed3pm
     X.loc[0, "RainToday"] = 1 if rain_today == "Yes" else 0
 
-    # One-hot untuk Location
-    if location:
-        col_location = f"Location_{location}"
-        if col_location in X.columns:
-            X.loc[0, col_location] = 1.0
-        else:
-            st.warning(f"Location '{location}' tidak dikenali model.")
+    # One-hot Location
+    col_location = f"Location_{location}"
+    if col_location in X.columns:
+        X.loc[0, col_location] = 1.0
 
     # One-hot Region
     col_region = f"Region_{region}"
